@@ -1,8 +1,6 @@
 # IwSK_Projekt
 Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie projektowe
 
-###########################################################################################################
-
 ## PROWADZĄCY
 
   Wojciech Mielczarek
@@ -36,7 +34,6 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
   - dwóch liczników wyposażonych w łącze RS-485,
   - okablowania połączenia bezmodemowego oraz magistrali RS-485.
 
-###########################################################################################################
 ## KONTROLA KOMUNIKACJ NA PORCIE ZNAKOWYM
 
   Funkcje (OB – funkcja obligatoryjna, OP - funkcja opcjonalna)
@@ -106,7 +103,6 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
                                         Rys.1. Połączenie bezpośrednie („bezmodemowe”). 
                                         Kabel zakończony złączami DB9F po obu stronach.
 
-###########################################################################################################
 ## OBSŁUGA KOMUNIKACJI POMIĘDZY STACJAMI SYSTEMU MODBUS PRACUJĄCYMI W TRYBIE ASCII LUB RTU
 
   Program implementuje funkcje warstw fizycznej i łącza danych sieci obiektowej opartej na
@@ -187,4 +183,3 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
                           
                                                     Rys.3. Transakcja
                                                     
-###########################################################################################################
