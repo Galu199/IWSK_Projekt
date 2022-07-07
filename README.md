@@ -1,10 +1,7 @@
-# IWSK_Projekt
-zadanie projektowe.
-
 # IwSK_Projekt
 Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie projektowe
 
-#############################################################################################################################
+###########################################################################################################
 
 ## PROWADZĄCY
 
@@ -24,9 +21,9 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
 
 ## LITERATURA
   
-  1. W. Mielczarek: Szeregowe interfejsy cyfrowe, Helion 1993
-  2. W. Mielczarek: Urządzenia i systemy kompatybilne ze standardem SCPI, Helion 1999
-  3. W. Mielczarek: Tłumienie zakłóceń i ochrona informacji w systemach pomiarowych, 
+  - W. Mielczarek: Szeregowe interfejsy cyfrowe, Helion 1993
+  - W. Mielczarek: Urządzenia i systemy kompatybilne ze standardem SCPI, Helion 1999
+  - W. Mielczarek: Tłumienie zakłóceń i ochrona informacji w systemach pomiarowych, 
      skrypt Politechniki Śląskiej nr 1921, Gliwice 1995
 
 ## NARZĘDZIA
@@ -39,7 +36,7 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
   - dwóch liczników wyposażonych w łącze RS-485,
   - okablowania połączenia bezmodemowego oraz magistrali RS-485.
 
-#############################################################################################################################
+###########################################################################################################
 ## KONTROLA KOMUNIKACJ NA PORCIE ZNAKOWYM
 
   Funkcje (OB – funkcja obligatoryjna, OP - funkcja opcjonalna)
@@ -109,7 +106,7 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
                                         Rys.1. Połączenie bezpośrednie („bezmodemowe”). 
                                         Kabel zakończony złączami DB9F po obu stronach.
 
-#############################################################################################################################
+###########################################################################################################
 ## OBSŁUGA KOMUNIKACJI POMIĘDZY STACJAMI SYSTEMU MODBUS PRACUJĄCYMI W TRYBIE ASCII LUB RTU
 
   Program implementuje funkcje warstw fizycznej i łącza danych sieci obiektowej opartej na
@@ -190,4 +187,4 @@ Interfejsy w Systemach Komputerowych - Komunikacja przez port znakowy - zadanie 
                           
                                                     Rys.3. Transakcja
                                                     
-#############################################################################################################################
+###########################################################################################################
