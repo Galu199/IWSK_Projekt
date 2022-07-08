@@ -23,27 +23,27 @@ namespace IWSK_RS232
     /// </summary>
     public partial class MainWindow : Window
     {
-        public static string sendBuffer = "";
+        static string sendBuffer = "";
+        string ownTerminator;
+        string dataTermintaorBuffer;
+        bool dsrCstThreadContinue = false;
+        bool rtsCtsHandshake = false;
+        bool dtrDsrHandshake = false;
+        bool XonXoffHandshake = false;
+        bool pingMode = false;
+        bool pingReady = true;
 
-        public bool dsrCstThreadContinue = false;
-        public bool rtsCtsHandshake = false;
-        public bool dtrDsrHandshake = false;
-        public bool XonXoffHandshake = false;
-        public bool pingMode = false;
-        public bool pingReady = true;
+        enum SelectTerminator { None, CR, LF, CRLF, OWN };
+        SelectTerminator terminator;
 
-        public string ownTerminator;
-        public string dataTermintaorBuffer;
-
-        public enum SelectTerminator { None, CR, LF, CRLF, OWN };
-        public SelectTerminator terminator;
-
-        public SerialPort serialPort1;
+        SerialPort serialPort;
 
         public MainWindow()
         {
             InitializeComponent();
-            serialPort1 = (SerialPort)Resources["serialPort"];
+            serialPort = (SerialPort)Resources["serialPort"];
+            masterBox.IsEnabled = false;
+            slaveBox.IsEnabled = false;
         }
 
         private void ComboBoxPort_DropDownOpened(object sender, EventArgs e)
@@ -54,45 +54,49 @@ namespace IWSK_RS232
 
         private void ButtonOpen_Click(object sender, RoutedEventArgs e)
         {
-            if (serialPort1.IsOpen) return;
+            if (serialPort.IsOpen)
+            {
+                MessageBox.Show($"Port {serialPort.PortName} is already open");
+                return;
+            }
             try
             {
                 string portName = Convert.ToString(ComboBoxPort.SelectedItem);
-                serialPort1 = new SerialPort();
-                serialPort1.PortName = portName;
-                serialPort1.BaudRate = Convert.ToInt32(ComboBoxSpeed.Text);
-                serialPort1.DataBits = Convert.ToInt32(ComboBoxBitsCount.SelectedValue.ToString());
-                serialPort1.Parity = (Parity)ComboBoxParityBit.SelectedIndex;
-                serialPort1.StopBits = (StopBits)(ComboBoxStopBit.SelectedIndex + 1);
+                serialPort = new SerialPort();
+                serialPort.PortName = portName;
+                serialPort.BaudRate = Convert.ToInt32(ComboBoxSpeed.Text);
+                serialPort.DataBits = Convert.ToInt32(ComboBoxBitsCount.SelectedValue.ToString());
+                serialPort.Parity = (Parity)ComboBoxParityBit.SelectedIndex;
+                serialPort.StopBits = (StopBits)(ComboBoxStopBit.SelectedIndex + 1);
                 switch (ComboBoxFlowControl.SelectedIndex)
                 {
                     case 3:
                         dtrDsrHandshake = true;
                         rtsCtsHandshake = false;
                         XonXoffHandshake = false;
-                        serialPort1.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
-                        serialPort1.DtrEnable = true;
+                        serialPort.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
+                        serialPort.DtrEnable = true;
                         break;
                     case 2:
                         dtrDsrHandshake = false;
                         rtsCtsHandshake = true;
                         XonXoffHandshake = false;
-                        serialPort1.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
-                        serialPort1.RtsEnable = true;
+                        serialPort.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
+                        serialPort.RtsEnable = true;
                         //serialPort1.Handshake = (Handshake)2;
                         break;
                     case 1:
                         dtrDsrHandshake = false;
                         rtsCtsHandshake = false;
                         XonXoffHandshake = true;
-                        serialPort1.Handshake = (Handshake)Enum.ToObject(typeof(Handshake), ComboBoxFlowControl.SelectedIndex);
+                        serialPort.Handshake = (Handshake)Enum.ToObject(typeof(Handshake), ComboBoxFlowControl.SelectedIndex);
                         break;
                     case 0:
                     default:
-                        dtrDsrHandshake = true;
-                        rtsCtsHandshake = true;
-                        XonXoffHandshake = true;
-                        serialPort1.Handshake = (Handshake)Enum.ToObject(typeof(Handshake), ComboBoxFlowControl.SelectedIndex);
+                        dtrDsrHandshake = false;
+                        rtsCtsHandshake = false;
+                        XonXoffHandshake = false;
+                        serialPort.Handshake = (Handshake)Enum.ToObject(typeof(Handshake), ComboBoxFlowControl.SelectedIndex);
                         break;
                 }
 
@@ -102,13 +106,13 @@ namespace IWSK_RS232
                     ownTerminator = TextBoxTerminatorCustom.Text.Length < 2 ? "\r\n" : TextBoxTerminatorCustom.Text;
                 }
 
-                serialPort1.ReadBufferSize = 4096;
-                serialPort1.Open();
+                serialPort.ReadBufferSize = 4096;
+                serialPort.Open();
 
                 dsrCstThreadContinue = true;
 
-                serialPort1.DataReceived += DataReceivedHandler;
-                serialPort1.PinChanged += SerialPort1_PinChanged;
+                serialPort.DataReceived += DataReceivedHandler;
+                serialPort.PinChanged += SerialPort1_PinChanged;
 
                 dsrCstListenerHandler();
 
@@ -126,19 +130,21 @@ namespace IWSK_RS232
                     ButtonXOFF.IsEnabled = true;
                 }
 
+                ButtonClose.IsEnabled = true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                MessageBox.Show(ex.Message);
             }
         }
 
         private void ButtonClose_Click(object sender, RoutedEventArgs e)
         {
-            if (serialPort1.IsOpen)
+            if (serialPort.IsOpen)
             {
                 dsrCstThreadContinue = false;
-                serialPort1.Close();
+                serialPort.Close();
                 portSelectBox.IsEnabled = true;
                 ButtonPingMode.IsEnabled = false;
 
@@ -146,6 +152,51 @@ namespace IWSK_RS232
                 ButtonRTS.IsEnabled = false;
                 ButtonXON.IsEnabled = false;
                 ButtonXOFF.IsEnabled = false;
+
+                ButtonClose.IsEnabled = false;
+            }
+        }
+
+        private void ButtonSend_Click(object sender, RoutedEventArgs e)
+        {
+            string dataToSend = TextBoxInput.Text;
+
+            if (serialPort.IsOpen && dataToSend != "")
+            {
+                if (terminator == SelectTerminator.CR)
+                    dataToSend += '\r';
+                else if (terminator == SelectTerminator.LF)
+                    dataToSend += '\n';
+                else if (terminator == SelectTerminator.CRLF)
+                    dataToSend += "\r\n";
+                else if (terminator == SelectTerminator.OWN)
+                    dataToSend += ownTerminator;
+                if (dtrDsrHandshake)
+                {
+                    if (serialPort.CDHolding)
+                    {
+                        serialPort.Write(dataToSend);
+                    }
+                    else
+                    {
+                        sendBuffer += dataToSend;
+                    }
+                }
+                else if (rtsCtsHandshake)
+                {
+                    if (serialPort.CtsHolding)
+                    {
+                        serialPort.Write(dataToSend);
+                    }
+                    else
+                    {
+                        sendBuffer += dataToSend;
+                    }
+                }
+                else
+                {
+                    serialPort.Write(dataToSend);
+                }
             }
         }
 
@@ -172,7 +223,7 @@ namespace IWSK_RS232
 
         private void ButtonPingSend_Click(object sender, RoutedEventArgs e)
         {
-            serialPort1.Write("\r");
+            serialPort.Write("\r");
             pingReady = false;
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -207,35 +258,35 @@ namespace IWSK_RS232
 
         private void ButtonDTR_Click(object sender, RoutedEventArgs e)
         {
-            serialPort1.DtrEnable = !serialPort1.DtrEnable;
-            if (serialPort1.DtrEnable) LampDTR.Background = Brushes.Green;
+            serialPort.DtrEnable = !serialPort.DtrEnable;
+            if (serialPort.DtrEnable) LampDTR.Background = Brushes.Green;
             else LampDTR.Background = Brushes.Red;
         }
 
         private void ButtonRTS_Click(object sender, RoutedEventArgs e)
         {
-            serialPort1.RtsEnable = !serialPort1.RtsEnable;
-            if (serialPort1.RtsEnable) LampRTS.Background = Brushes.Green;
+            serialPort.RtsEnable = !serialPort.RtsEnable;
+            if (serialPort.RtsEnable) LampRTS.Background = Brushes.Green;
             else LampRTS.Background = Brushes.Red;
         }
 
         private void ButtonXON_Click(object sender, RoutedEventArgs e)
         {
-            serialPort1.Write(((char)17).ToString());
+            serialPort.Write(((char)17).ToString());
             LampX.Background = Brushes.Green;
         }
 
         private void ButtonXOFF_Click(object sender, RoutedEventArgs e)
         {
-            serialPort1.Write(((char)19).ToString());
+            serialPort.Write(((char)19).ToString());
             LampX.Background = Brushes.Red;
         }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            if (serialPort1.IsOpen)
+            if (serialPort.IsOpen)
             {
-                serialPort1.Close();
+                serialPort.Close();
             }
         }
 
@@ -369,15 +420,264 @@ namespace IWSK_RS232
 
         private void dsrCstListenerHandler()
         {
-            if (serialPort1.CDHolding)
+            if (serialPort.CDHolding)
                 LampDSR.Background = Brushes.Green;
             else
                 LampDSR.Background = Brushes.Red;
-            if (serialPort1.CtsHolding)
+            if (serialPort.CtsHolding)
                 LampCTS.Background = Brushes.Green;
             else
                 LampCTS.Background = Brushes.Red;
         }
 
+        // MOD BUS
+        ModbusSlave modbusSlave;
+        ModbusMaster modbusMaster;
+        const int BrushDeley = 100;
+
+        private void ModbusOpen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (serialPort.IsOpen)
+                {
+                    MessageBox.Show($"Port {serialPort.PortName} is already open");
+                    return;
+                }
+
+                serialPort = new SerialPort();
+                serialPort.PortName = Convert.ToString(portNameCombo.SelectedItem);
+                serialPort.BaudRate = int.Parse(baudCombo.Text);
+
+                if (RadioMaster.IsChecked == false)
+                {
+                    modbusSlave = new ModbusSlave(serialPort);
+                    modbusSlave.Function1Event += SlaveFunction1Handler;
+                    modbusSlave.RequestDebugHandler += SlaveRequestDebugHandler;
+                    modbusSlave.ResponseDebugHandler += SlaveResponseDebugHandler;
+                    modbusSlave.BadCrcHandler += BadCrc;
+                    modbusSlave.TimeoutHandler += ModbusMaster_TimeoutHandler;
+                }
+                else
+                {
+                    modbusMaster = new ModbusMaster(serialPort);
+                    modbusMaster.BadCrcHandler += BadCrc;
+                    modbusMaster.RequestHandler += MasterRequestDebugHandler;
+                    modbusMaster.ResponseHandler += MasterResponseDebugHandler;
+                    modbusMaster.Function2Hanlder += MasterFunction2;
+                    modbusMaster.TimeoutHandler += ModbusMaster_TimeoutHandler;
+                    serialPort.Open();
+                }
+
+                if (RadioMaster.IsChecked == true)
+                {
+                    masterBox.IsEnabled = true;
+                    slaveBox.IsEnabled = false;
+                }
+                else
+                {
+                    masterBox.IsEnabled = false;
+                    slaveBox.IsEnabled = true;
+                }
+
+                AllMessageBox.Text = "";
+                ModbusOpen.IsEnabled = false;
+                RadioMaster.IsEnabled = false;
+                RadioSlave.IsEnabled = false;
+                ModbusClose.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void ModbusClose_Click(object sender, RoutedEventArgs e)
+        {
+            if (serialPort.IsOpen)
+            {
+                serialPort.Close();
+            }
+            masterBox.IsEnabled = false;
+            slaveBox.IsEnabled = false;
+            ModbusOpen.IsEnabled = true;
+            RadioMaster.IsEnabled = true;
+            RadioSlave.IsEnabled = true;
+            ModbusClose.IsEnabled = false;
+            //startListenCheck.Checked = false;
+        }
+
+        private void SlaveFunction1Handler(object sender, ModbusEventArgs e)
+        {
+            //this.slaveRecivedTexbox.Invoke(new Action(() => slaveRecivedTexbox.Text = e.message));
+            slaveRecivedTexbox.AppendText(e.message);
+        }
+
+        private void SlaveRequestDebugHandler(object sender, ModbusEventArgs e)
+        {
+            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Przychodzące: " + e.message + Environment.NewLine)));
+            AllMessageBox.AppendText($"Slave Przychodzące: {e.message}{Environment.NewLine}");
+        }
+
+        private void SlaveResponseDebugHandler(object sender, ModbusEventArgs e)
+        {
+            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Wychodzące: " + e.message + Environment.NewLine)));
+            AllMessageBox.AppendText($"Slave Wychodzące: {e.message}{Environment.NewLine}");
+        }
+
+        private void BadCrc(object sender, ModbusEventArgs eventArgs)
+        {
+            MessageBox.Show($"Zła suma kontrolna: {eventArgs.message}", "CRC error");
+        }
+
+        private void ModbusMaster_TimeoutHandler(object sender, ModbusEventArgs e)
+        {
+            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText(e.message + Environment.NewLine)));
+            AllMessageBox.AppendText($"{e.message} {Environment.NewLine}");
+        }
+
+        private void MasterRequestDebugHandler(object sender, ModbusEventArgs e)
+        {
+            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Wychodzące: " + e.message + Environment.NewLine)));
+            AllMessageBox.AppendText($"Master Wychodzące: {e.message}{Environment.NewLine}");
+        }
+
+        private void MasterResponseDebugHandler(object sender, ModbusEventArgs e)
+        {
+            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Przychodzące: " + e.message + Environment.NewLine)));
+            AllMessageBox.AppendText($"Master Przychodzące: {e.message}{Environment.NewLine}");
+        }
+
+        private void MasterFunction2(object sender, ModbusEventArgs e)
+        {
+            //this.masterRecivedDataTexbox.Invoke(new Action(() => masterRecivedDataTexbox.Text = e.message));
+            masterRecivedDataTexbox.AppendText($"{e.message} {Environment.NewLine}");
+        }
+
+        private void ModbusOpenSlave_Click(object sender, RoutedEventArgs e)
+        {
+            var adres = int.Parse(slaveAddresTexbox.Text);
+            modbusSlave.setCharacterTimeout((int)(double.Parse(slaveCharacterTimeUpDown.Text) * 1000));
+            modbusSlave.function2Message = slaveSendTextbox.Text;
+            modbusSlave.open(adres);
+            slaveAddresTexbox.IsEnabled = false;
+            slaveCharacterTimeUpDown.IsEnabled = false;
+        }
+
+        private void ModbusColeSlave_Click(object sender, RoutedEventArgs e)
+        {
+            modbusSlave.close();
+            slaveAddresTexbox.IsEnabled = true;
+            slaveCharacterTimeUpDown.IsEnabled = true;
+        }
+
+        private async void ModbusFunction1_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                //label13.Invoke(new Action(() => label13.BackColor = Color.Green));
+                label13.Background = Brushes.YellowGreen;
+                await Task.Run(async() => await Task.Delay(BrushDeley));
+                int addres = int.Parse(addresTextBox.Text);
+                string data = argTextBox.Text;
+                int retransmit = int.Parse(retransmissionUpDown.Text);
+                int charTimeout = (int)(double.Parse(masterCharacterTimeUpDown.Text) * 1000);
+                int transmisionTimeout = (int)(double.Parse(masterTransactionTimeUpDown.Text) * 1000);
+                masterRecivedDataTexbox.Text = "";
+                modbusMaster.setTransactionTimeout(transmisionTimeout, charTimeout);
+                modbusMaster.prepareFunction1(addres, data);
+                retransmitController(retransmit);
+                label13.Background = Brushes.Green;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+            }
+            catch (FormatException)
+            {
+                MessageBox.Show($"Number format is required (X,XX)");
+            }
+            catch (Exception ex)
+            {
+                label13.Background = Brushes.Red;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+                Console.WriteLine(ex.Message);
+                MessageBox.Show($"{ex.Message}");
+            }
+        }
+
+        private async void ModbusFunction2_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                //label13.Invoke(new Action(() => label13.BackColor = Color.Green));
+                label13.Background = Brushes.YellowGreen;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+                int addres = int.Parse(addresTextBox.Text);
+                string data = argTextBox.Text;
+                int retransmit = int.Parse(retransmissionUpDown.Text);
+                int charTimeout = (int)(double.Parse(masterCharacterTimeUpDown.Text) * 1000);
+                int transmisionTimeout = (int)(double.Parse(masterTransactionTimeUpDown.Text) * 1000);
+                masterRecivedDataTexbox.Text = "";
+                modbusMaster.setTransactionTimeout(transmisionTimeout, charTimeout);
+                if (addres == 0)
+                {
+                    MessageBox.Show("funkcja adresowa nie może być używana dla adresu rozgłoszniowego");
+                    masterRecivedDataTexbox.Text = "funkcja adresowa";
+                }
+                else
+                {
+                    modbusMaster.prepareFunction2(addres, data);
+                    retransmitController(retransmit);
+                }
+                //label13.BackColor = Color.Transparent;
+                label13.Background = Brushes.Green;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+            }
+            catch (FormatException)
+            {
+                MessageBox.Show($"Number format is required (X,XX)");
+            }
+            catch (Exception ex)
+            {
+                label13.Background = Brushes.Red;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+                Console.WriteLine(ex.Message);
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private async void retransmitController(int retransmit)
+        {
+            for (int i = 1; i <= retransmit + 1; i++)
+            {
+                try
+                {
+                    label13.Background = Brushes.YellowGreen;
+                    await Task.Run(async () => await Task.Delay(BrushDeley));
+                    modbusMaster.Transaction(i);
+                    //break;
+                }
+                catch (TimeoutException)
+                {
+                    label13.Background = Brushes.Red;
+                    await Task.Run(async () => await Task.Delay(BrushDeley));
+                }
+            }
+        }
+
+        private void slaveSendTextbox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            modbusSlave.function2Message = slaveSendTextbox.Text;
+        }
+
+        private void portNameCombo_DropDownOpened(object sender, EventArgs e)
+        {
+            portNameCombo.Items.Clear();
+            Array.ForEach(SerialPort.GetPortNames(), i => portNameCombo.Items.Add(i));
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            AllMessageBox.Clear();
+        }
     }
 }
