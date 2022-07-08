@@ -5,15 +5,134 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:IWSK_RS232"
         mc:Ignorable="d"
-        Title="IWSK - RS232 - ModBus - Informatyka 2022 GKiO1 Sekcja2" Height="450" Width="800">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-    </Grid>
+        xmlns:ports="clr-namespace:System.IO.Ports;assembly=System"
+        Title="IWSK - RS232 - ModBus - Informatyka 2022 GKiO1 Sekcja2" Height="490" Width="900">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ports:SerialPort x:Key="serialPort"/>
+            <Style TargetType="{x:Type TextBox}">
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontFamily" Value="Comic Sans MS" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="Gray" />
+            </Style>
+            <Style TargetType="{x:Type Control}">
+                <Setter Property="FontFamily" Value="Comic Sans MS" />
+            </Style>
+            <Style TargetType="{x:Type Label}">
+                <Setter Property="FontFamily" Value="Comic Sans MS" />
+            </Style>
+            <Style TargetType="{x:Type TabItem}">
+                <Setter Property="FontFamily" Value="Comic Sans MS" />
+            </Style>
+            <Style TargetType="{x:Type Button}">
+                <Setter Property="FontFamily" Value="Comic Sans MS" />
+                <Setter Property="Margin" Value="4" />
+            </Style>
+            <!-- Add other targets such as CheckBox here. -->
+        </ResourceDictionary>
+    </Window.Resources>
+    <TabControl>
+        <TabItem Header="RS-232">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ScrollViewer Padding="4" Grid.Column="0">
+                        <StackPanel x:Name="portSelectBox">
+                            <Label>Port</Label>
+                            <ComboBox x:Name="ComboBoxPort" DropDownOpened="ComboBoxPort_DropDownOpened" SelectedValuePath="Content"></ComboBox>
+                            <Label>Szybkość</Label>
+                            <ComboBox x:Name="ComboBoxSpeed" SelectedValuePath="Content">
+                                <ComboBoxItem IsSelected="True">9600</ComboBoxItem>
+                                <ComboBoxItem>57600</ComboBoxItem>
+                                <ComboBoxItem>115200</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Ilość bitów</Label>
+                            <ComboBox x:Name="ComboBoxBitsCount" SelectedValuePath="Content">
+                                <ComboBoxItem>7</ComboBoxItem>
+                                <ComboBoxItem IsSelected="True">8</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Bit parzystości</Label>
+                            <ComboBox x:Name="ComboBoxParityBit">
+                                <ComboBoxItem IsSelected="True">Brak</ComboBoxItem>
+                                <ComboBoxItem>Nieparzystości</ComboBoxItem>
+                                <ComboBoxItem>Parzystości</ComboBoxItem>
+                                <ComboBoxItem>Zawsze parzysty</ComboBoxItem>
+                                <ComboBoxItem>Zawsze nieparzysty</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Bity stop</Label>
+                            <ComboBox x:Name="ComboBoxStopBit">
+                                <ComboBoxItem IsSelected="True">Jeden</ComboBoxItem>
+                                <ComboBoxItem>Dwa</ComboBoxItem>
+                                <ComboBoxItem>Półtorej</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Kontrola przepływu</Label>
+                            <ComboBox x:Name="ComboBoxFlowControl">
+                                <ComboBoxItem IsSelected="True" >Brak</ComboBoxItem>
+                                <ComboBoxItem>XON-XOFF</ComboBoxItem>
+                                <ComboBoxItem>RTS-CTS</ComboBoxItem>
+                                <ComboBoxItem>DTR-DSR</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Terminator</Label>
+                            <ComboBox x:Name="ComboBoxTerminator" SelectionChanged="ComboBoxTerminator_SelectionChanged">
+                                <ComboBoxItem IsSelected="True">Brak</ComboBoxItem>
+                                <ComboBoxItem>CR</ComboBoxItem>
+                                <ComboBoxItem>LF</ComboBoxItem>
+                                <ComboBoxItem>CR-LF</ComboBoxItem>
+                                <ComboBoxItem>Własny</ComboBoxItem>
+                            </ComboBox>
+                            <Label>Własny terminator</Label>
+                            <TextBox x:Name="TextBoxTerminatorCustom" IsEnabled="False"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <ScrollViewer Padding="4" Grid.Column="1">
+                        <StackPanel>
+                            <Button x:Name="ButtonOpen" Click="ButtonOpen_Click">Otwórz</Button>
+                            <Button x:Name="ButtonClose" Click="ButtonClose_Click">Zamknij</Button>
+                            <Button x:Name="ButtonPingMode" Click="ButtonPingMode_Click" IsEnabled="False">PING mode</Button>
+                            <Button x:Name="ButtonPingSend" IsEnabled="False" Click="ButtonPingSend_Click">Wyślij PING</Button>
+                            <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Label x:Name="LampDTR" Background="Red" BorderBrush="Black" BorderThickness="1" Margin="4" Content="DTR" Width="40" HorizontalContentAlignment="Center"/>
+                                <Label x:Name="LampDSR" Background="Red" BorderBrush="Black" BorderThickness="1" Margin="4" Content="DSR" Width="40" HorizontalContentAlignment="Center"/>
+                            </DockPanel>
+                            <Button x:Name="ButtonDTR" IsEnabled="False" Click="ButtonDTR_Click">DTR</Button>
+                            <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Label x:Name="LampRTS" Background="Red" BorderBrush="Black" Margin="4" BorderThickness="1" Content="RTS" Width="40" HorizontalContentAlignment="Center" />
+                                <Label x:Name="LampCTS" Background="Red" BorderBrush="Black" Margin="4" BorderThickness="1" Content="CTS" Width="40" HorizontalContentAlignment="Center"/>
+                            </DockPanel>
+                            <Button x:Name="ButtonRTS" IsEnabled="False" Click="ButtonRTS_Click">RTS</Button>
+                            <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Label x:Name="LampX" Background="Red" BorderBrush="Black" Margin="4" BorderThickness="1" Content="X" Width="40" HorizontalContentAlignment="Center"/>
+                            </DockPanel>
+                            <Button x:Name="ButtonXON" IsEnabled="False" Click="ButtonXON_Click">XON</Button>
+                            <Button x:Name="ButtonXOFF" IsEnabled="False" Click="ButtonXOFF_Click">XOFF</Button>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="30"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBox x:Name="TextBoxInput" Grid.Row="0"></TextBox>
+                    <Button x:Name="ButtonSend" Grid.Row="1">Wyślij</Button>
+                    <TextBox x:Name="TextBoxOutput" Grid.Row="2" IsReadOnly="True"></TextBox>
+                </Grid>
+            </Grid>
+        </TabItem>
+        <TabItem Header="ModBus">
+
+        </TabItem>
+    </TabControl>
 </Window>
