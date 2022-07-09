@@ -64,6 +64,8 @@ namespace IWSK_RS232
                 string portName = Convert.ToString(ComboBoxPort.SelectedItem);
                 serialPort = new SerialPort();
                 serialPort.PortName = portName;
+                serialPort.WriteTimeout = 1000;
+                serialPort.ReadTimeout = 1000;
                 serialPort.BaudRate = Convert.ToInt32(ComboBoxSpeed.Text);
                 serialPort.DataBits = Convert.ToInt32(ComboBoxBitsCount.SelectedValue.ToString());
                 serialPort.Parity = (Parity)ComboBoxParityBit.SelectedIndex;
@@ -131,6 +133,8 @@ namespace IWSK_RS232
                 {
                     ButtonXON.IsEnabled = true;
                     ButtonXOFF.IsEnabled = true;
+                    serialPort.Write(((char)17).ToString());
+                    LampX.Background = Brushes.Green;
                 }
                 if (ComboBoxFlowControl.SelectedIndex == 0)
                 {
@@ -168,6 +172,7 @@ namespace IWSK_RS232
                 LampDSR.Background = Brushes.Red;
                 LampCTS.Background = Brushes.Red;
                 LampRTS.Background = Brushes.Red;
+                LampX.Background = Brushes.Red;
             }
         }
 
@@ -239,11 +244,10 @@ namespace IWSK_RS232
         {
             try
             {
-                serialPort.WriteTimeout = 2000;
-                serialPort.Write("\r");
-                pingReady = false;
                 Stopwatch sw = new Stopwatch();
+                pingReady = false;
                 sw.Start();
+                serialPort.Write("\r");
                 while (!pingReady)
                 {
                     if (sw.ElapsedMilliseconds > 1000)
@@ -385,12 +389,8 @@ namespace IWSK_RS232
                         char term = (char)sp.ReadChar();
                         if (term == '\r')
                         {
-                            TextBoxOutput.AppendText(dataTermintaorBuffer + '\n');
-                            //recivedTextBox.Invoke(new Action(delegate ()
-                            //{
-                            //    recivedTextBox.AppendText(dataTermintaorBuffer + '\n');
-                            //}));
-                            //dataTermintaorBuffer = "";
+                            TextBoxOutput.Dispatcher.Invoke(() => TextBoxOutput.AppendText(dataTermintaorBuffer + '\n'));
+                            dataTermintaorBuffer = "";
                         }
                         else
                         {
@@ -402,12 +402,8 @@ namespace IWSK_RS232
                         char term = (char)sp.ReadChar();
                         if (term == '\n')
                         {
-                            TextBoxOutput.AppendText(dataTermintaorBuffer + '\n');
-                            //recivedTextBox.Invoke(new Action(delegate ()
-                            //{
-                            //    recivedTextBox.AppendText(dataTermintaorBuffer + '\n');
-                            //}));
-                            //dataTermintaorBuffer = "";
+                            TextBoxOutput.Dispatcher.Invoke(() => TextBoxOutput.AppendText(dataTermintaorBuffer + '\n'));
+                            dataTermintaorBuffer = "";
                         }
                         else
                         {
@@ -419,12 +415,8 @@ namespace IWSK_RS232
                         dataTermintaorBuffer += (char)sp.ReadChar();
                         if (dataTermintaorBuffer.Contains("\r\n"))
                         {
-                            TextBoxOutput.AppendText(dataTermintaorBuffer + '\n');
-                            //recivedTextBox.Invoke(new Action(delegate ()
-                            //{
-                            //    recivedTextBox.AppendText(dataTermintaorBuffer + '\n');
-                            //}));
-                            //dataTermintaorBuffer = "";
+                            TextBoxOutput.Dispatcher.Invoke(() => TextBoxOutput.AppendText(dataTermintaorBuffer + '\n'));
+                            dataTermintaorBuffer = "";
                         }
                     }
                     else
@@ -432,12 +424,10 @@ namespace IWSK_RS232
                         dataTermintaorBuffer += (char)sp.ReadChar();
                         if (dataTermintaorBuffer.Contains(ownTerminator))
                         {
-                            TextBoxOutput.AppendText(dataTermintaorBuffer.Substring(0, dataTermintaorBuffer.Length - 2) + '\n');
-                            //recivedTextBox.Invoke(new Action(delegate ()
-                            //{
-                            //    recivedTextBox.AppendText(dataTermintaorBuffer.Substring(0, dataTermintaorBuffer.Length - 2) + '\n');
-                            //}));
-                            //dataTermintaorBuffer = "";
+                            TextBoxOutput.Dispatcher.Invoke(() =>
+                                TextBoxOutput.AppendText(dataTermintaorBuffer.Substring(0, dataTermintaorBuffer.Length - 2) + '\n')
+                            );
+                            dataTermintaorBuffer = "";
                         }
                     }
                 }
@@ -445,10 +435,7 @@ namespace IWSK_RS232
             else
             {
                 SerialPort sp = (SerialPort)sender;
-                TextBoxOutput.AppendText(sp.ReadExisting());
-                //recivedTextBox.Invoke(new Action(delegate () {
-                //    recivedTextBox.AppendText(sp.ReadExisting());
-                //}));
+                TextBoxOutput.Dispatcher.Invoke(() => TextBoxOutput.AppendText(sp.ReadExisting()));
             }
         }
 
@@ -460,13 +447,13 @@ namespace IWSK_RS232
         private void dsrCstListenerHandler()
         {
             if (serialPort.CDHolding)
-                LampDSR.Background = Brushes.Green;
+                LampDSR.Dispatcher.Invoke(() => LampDSR.Background = Brushes.Green);
             else
-                LampDSR.Background = Brushes.Red;
+                LampDSR.Dispatcher.Invoke(()=>LampDSR.Background = Brushes.Red);
             if (serialPort.CtsHolding)
-                LampCTS.Background = Brushes.Green;
+                LampCTS.Dispatcher.Invoke(() => LampCTS.Background = Brushes.Green);
             else
-                LampCTS.Background = Brushes.Red;
+                LampCTS.Dispatcher.Invoke(() => LampCTS.Background = Brushes.Red);
         }
 
         // MOD BUS
@@ -523,6 +510,8 @@ namespace IWSK_RS232
                 ModbusOpen.IsEnabled = false;
                 RadioMaster.IsEnabled = false;
                 RadioSlave.IsEnabled = false;
+                portNameCombo.IsEnabled = false;
+                baudCombo.IsEnabled = false;
                 ModbusClose.IsEnabled = true;
             }
             catch (Exception ex)
@@ -544,54 +533,79 @@ namespace IWSK_RS232
             RadioMaster.IsEnabled = true;
             RadioSlave.IsEnabled = true;
             ModbusClose.IsEnabled = false;
+            portNameCombo.IsEnabled = true;
+            baudCombo.IsEnabled = true;
             //startListenCheck.Checked = false;
         }
 
-        private void SlaveFunction1Handler(object sender, ModbusEventArgs e)
+        private async void SlaveFunction1Handler(object sender, ModbusEventArgs e)
         {
-            //this.slaveRecivedTexbox.Invoke(new Action(() => slaveRecivedTexbox.Text = e.message));
-            slaveRecivedTexbox.AppendText(e.message);
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Green);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            slaveRecivedTexbox.Dispatcher.Invoke(() =>
+                slaveRecivedTexbox.AppendText(e.message)
+            );
         }
 
-        private void SlaveRequestDebugHandler(object sender, ModbusEventArgs e)
+        private async void SlaveRequestDebugHandler(object sender, ModbusEventArgs e)
         {
-            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Przychodzące: " + e.message + Environment.NewLine)));
-            AllMessageBox.AppendText($"Slave Przychodzące: {e.message}{Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Cyan);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            AllMessageBox.Dispatcher.Invoke(() =>
+                AllMessageBox.AppendText($"Przychodzące: {e.message}{Environment.NewLine}")
+            );
         }
 
-        private void SlaveResponseDebugHandler(object sender, ModbusEventArgs e)
+        private async void SlaveResponseDebugHandler(object sender, ModbusEventArgs e)
         {
-            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Wychodzące: " + e.message + Environment.NewLine)));
-            AllMessageBox.AppendText($"Slave Wychodzące: {e.message}{Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Blue);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            AllMessageBox.Dispatcher.Invoke(() =>
+                AllMessageBox.AppendText($"Wychodzące: {e.message}{Environment.NewLine}")
+            );
         }
 
-        private void BadCrc(object sender, ModbusEventArgs eventArgs)
+        private async void BadCrc(object sender, ModbusEventArgs eventArgs)
         {
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
             MessageBox.Show($"Zła suma kontrolna: {eventArgs.message}", "CRC error");
         }
 
-        private void ModbusMaster_TimeoutHandler(object sender, ModbusEventArgs e)
+        private async void ModbusMaster_TimeoutHandler(object sender, ModbusEventArgs e)
         {
-            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText(e.message + Environment.NewLine)));
-            AllMessageBox.AppendText($"{e.message} {Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            AllMessageBox.Dispatcher.Invoke(() =>
+                AllMessageBox.AppendText($"{e.message} {Environment.NewLine}")
+            );
         }
 
-        private void MasterRequestDebugHandler(object sender, ModbusEventArgs e)
+        private async void MasterRequestDebugHandler(object sender, ModbusEventArgs e)
         {
-            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Wychodzące: " + e.message + Environment.NewLine)));
-            AllMessageBox.AppendText($"Master Wychodzące: {e.message}{Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Cyan);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            AllMessageBox.Dispatcher.Invoke(() =>
+                AllMessageBox.AppendText($"Wychodzące: {e.message}{Environment.NewLine}")
+            );
         }
 
-        private void MasterResponseDebugHandler(object sender, ModbusEventArgs e)
+        private async void MasterResponseDebugHandler(object sender, ModbusEventArgs e)
         {
-            //this.AllMessageBox.Invoke(new Action(() => AllMessageBox.AppendText("Przychodzące: " + e.message + Environment.NewLine)));
-            AllMessageBox.AppendText($"Master Przychodzące: {e.message}{Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Blue);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            AllMessageBox.Dispatcher.Invoke(() =>
+                AllMessageBox.AppendText($"Przychodzące: {e.message}{Environment.NewLine}")
+            );
         }
 
-        private void MasterFunction2(object sender, ModbusEventArgs e)
+        private async void MasterFunction2(object sender, ModbusEventArgs e)
         {
-            //this.masterRecivedDataTexbox.Invoke(new Action(() => masterRecivedDataTexbox.Text = e.message));
-            masterRecivedDataTexbox.AppendText($"{e.message} {Environment.NewLine}");
+            label13.Dispatcher.Invoke(() => label13.Background = Brushes.Purple);
+            await Task.Run(async () => await Task.Delay(BrushDeley));
+            masterRecivedDataTexbox.Dispatcher.Invoke(() => 
+                masterRecivedDataTexbox.AppendText($"{e.message} {Environment.NewLine}")
+            );
         }
 
         private async void ModbusOpenSlave_Click(object sender, RoutedEventArgs e)
@@ -614,7 +628,7 @@ namespace IWSK_RS232
             }
             catch (Exception ex)
             {
-                label13.Background = Brushes.Red;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
                 Console.WriteLine(ex.Message);
                 MessageBox.Show($"{ex.Message}");
@@ -635,8 +649,7 @@ namespace IWSK_RS232
         {
             try
             {
-                //label13.Invoke(new Action(() => label13.BackColor = Color.Green));
-                label13.Background = Brushes.YellowGreen;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.YellowGreen);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
                 int addres = int.Parse(addresTextBox.Text);
                 string data = argTextBox.Text;
@@ -647,7 +660,7 @@ namespace IWSK_RS232
                 modbusMaster.setTransactionTimeout(transmisionTimeout, charTimeout);
                 modbusMaster.prepareFunction1(addres, data);
                 retransmitController(retransmit);
-                label13.Background = Brushes.Green;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.Green);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
             }
             catch (FormatException)
@@ -656,7 +669,7 @@ namespace IWSK_RS232
             }
             catch (Exception ex)
             {
-                label13.Background = Brushes.Red;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
                 Console.WriteLine(ex.Message);
                 MessageBox.Show($"{ex.Message}");
@@ -667,8 +680,7 @@ namespace IWSK_RS232
         {
             try
             {
-                //label13.Invoke(new Action(() => label13.BackColor = Color.Green));
-                label13.Background = Brushes.YellowGreen;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.YellowGreen);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
                 int addres = int.Parse(addresTextBox.Text);
                 string data = argTextBox.Text;
@@ -687,8 +699,7 @@ namespace IWSK_RS232
                     modbusMaster.prepareFunction2(addres, data);
                     retransmitController(retransmit);
                 }
-                //label13.BackColor = Color.Transparent;
-                label13.Background = Brushes.Green;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.Green);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
             }
             catch (FormatException)
@@ -697,7 +708,7 @@ namespace IWSK_RS232
             }
             catch (Exception ex)
             {
-                label13.Background = Brushes.Red;
+                label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
                 await Task.Run(async () => await Task.Delay(BrushDeley));
                 Console.WriteLine(ex.Message);
                 MessageBox.Show(ex.Message);
@@ -710,14 +721,14 @@ namespace IWSK_RS232
             {
                 try
                 {
-                    label13.Background = Brushes.YellowGreen;
+                    label13.Dispatcher.Invoke(() => label13.Background = Brushes.YellowGreen);
                     await Task.Run(async () => await Task.Delay(BrushDeley));
                     modbusMaster.Transaction(i);
-                    //break;
+                    break;
                 }
                 catch (TimeoutException)
                 {
-                    label13.Background = Brushes.Red;
+                    label13.Dispatcher.Invoke(() => label13.Background = Brushes.Red);
                     await Task.Run(async () => await Task.Delay(BrushDeley));
                 }
             }
@@ -737,6 +748,21 @@ namespace IWSK_RS232
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
             AllMessageBox.Clear();
+        }
+
+        private void MenuItem_Click2(object sender, RoutedEventArgs e)
+        {
+            TextBoxOutput.Clear();
+        }
+
+        private void MenuItem_Click3(object sender, RoutedEventArgs e)
+        {
+            masterRecivedDataTexbox.Clear();
+        }
+
+        private void MenuItem_Click4(object sender, RoutedEventArgs e)
+        {
+            slaveRecivedTexbox.Clear();
         }
     }
 }

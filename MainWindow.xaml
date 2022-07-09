@@ -54,7 +54,14 @@
                                 <ComboBox x:Name="ComboBoxPort" DropDownOpened="ComboBoxPort_DropDownOpened" SelectedValuePath="Content"></ComboBox>
                                 <Label>Szybkość</Label>
                                 <ComboBox x:Name="ComboBoxSpeed" SelectedValuePath="Content">
+                                    <ComboBoxItem>110</ComboBoxItem>
+                                    <ComboBoxItem>300</ComboBoxItem>
+                                    <ComboBoxItem>1200</ComboBoxItem>
+                                    <ComboBoxItem>2400</ComboBoxItem>
+                                    <ComboBoxItem>4800</ComboBoxItem>
                                     <ComboBoxItem IsSelected="True">9600</ComboBoxItem>
+                                    <ComboBoxItem>19200</ComboBoxItem>
+                                    <ComboBoxItem>38400</ComboBoxItem>
                                     <ComboBoxItem>57600</ComboBoxItem>
                                     <ComboBoxItem>115200</ComboBoxItem>
                                 </ComboBox>
@@ -129,9 +136,15 @@
                         <RowDefinition Height="30"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBox x:Name="TextBoxInput" Grid.Row="0"></TextBox>
+                    <TextBox x:Name="TextBoxInput" Grid.Row="0" AcceptsReturn="True"></TextBox>
                     <Button x:Name="ButtonSend" Grid.Row="1" Click="ButtonSend_Click">Wyślij</Button>
-                    <TextBox x:Name="TextBoxOutput" Grid.Row="2" IsReadOnly="True"></TextBox>
+                    <TextBox x:Name="TextBoxOutput" Grid.Row="2" IsReadOnly="True" AcceptsReturn="True">
+                        <TextBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Wyczyść" Click="MenuItem_Click2"></MenuItem>
+                            </ContextMenu>
+                        </TextBox.ContextMenu>
+                    </TextBox>
                 </Grid>
             </Grid>
         </TabItem>
@@ -142,7 +155,7 @@
                     <ColumnDefinition Width="2*"/>
                 </Grid.ColumnDefinitions>
                 <ScrollViewer Grid.Column="1" Padding="4">
-                    <TextBox x:Name="AllMessageBox" IsReadOnly="True">
+                    <TextBox x:Name="AllMessageBox" IsReadOnly="True" AcceptsReturn="True">
                         <TextBox.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Wyczyść" Click="MenuItem_Click"></MenuItem>
@@ -211,7 +224,13 @@
                                 <Label>Dane do wysłania</Label>
                                 <TextBox x:Name="argTextBox"></TextBox>
                                 <Label>Dane odebrane</Label>
-                                <TextBox x:Name="masterRecivedDataTexbox" IsReadOnly="True"></TextBox>
+                                <TextBox x:Name="masterRecivedDataTexbox" IsReadOnly="True">
+                                    <TextBox.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Wyczyść" Click="MenuItem_Click3"></MenuItem>
+                                        </ContextMenu>
+                                    </TextBox.ContextMenu>
+                                </TextBox>
                                 <Button x:Name="ModbusFunction1" Click="ModbusFunction1_Click">Funkcja 1</Button>
                                 <Button x:Name="ModbusFunction2" Click="ModbusFunction2_Click">Funkcja 2</Button>
                             </StackPanel>
@@ -227,7 +246,13 @@
                                 <Label>Dane do Wysłania</Label>
                                 <TextBox x:Name="slaveSendTextbox" TextChanged="slaveSendTextbox_TextChanged"></TextBox>
                                 <Label>Dane odebrane</Label>
-                                <TextBox x:Name="slaveRecivedTexbox" IsReadOnly="True"></TextBox>
+                                <TextBox x:Name="slaveRecivedTexbox" IsReadOnly="True">
+                                    <TextBox.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Wyczyść" Click="MenuItem_Click4"></MenuItem>
+                                        </ContextMenu>
+                                    </TextBox.ContextMenu>
+                                </TextBox>
                                 <Button x:Name="ModbusOpenSlave" Click="ModbusOpenSlave_Click">Włącz stacje Slave</Button>
                                 <Button x:Name="ModbusColeSlave" Click="ModbusColeSlave_Click" IsEnabled="False">Wyłącz stacje Slave</Button>
                             </StackPanel>
