@@ -206,7 +206,7 @@
                                 <TextBox x:Name="masterTransactionTimeUpDown">1,0</TextBox>
                                 <Label>Czas ciągłości ramki [s]</Label>
                                 <TextBox x:Name="masterCharacterTimeUpDown">0,05</TextBox>
-                                <Label>Ilość retransmisji [s]</Label>
+                                <Label>Ilość retransmisji</Label>
                                 <TextBox x:Name="retransmissionUpDown">0</TextBox>
                                 <Label>Dane do wysłania</Label>
                                 <TextBox x:Name="argTextBox"></TextBox>
@@ -229,7 +229,7 @@
                                 <Label>Dane odebrane</Label>
                                 <TextBox x:Name="slaveRecivedTexbox" IsReadOnly="True"></TextBox>
                                 <Button x:Name="ModbusOpenSlave" Click="ModbusOpenSlave_Click">Włącz stacje Slave</Button>
-                                <Button x:Name="ModbusColeSlave" Click="ModbusColeSlave_Click">Wyłącz stacje Slave</Button>
+                                <Button x:Name="ModbusColeSlave" Click="ModbusColeSlave_Click" IsEnabled="False">Wyłącz stacje Slave</Button>
                             </StackPanel>
                         </GroupBox>
                     </ScrollViewer>

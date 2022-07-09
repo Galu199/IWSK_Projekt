@@ -76,6 +76,8 @@ namespace IWSK_RS232
                         XonXoffHandshake = false;
                         serialPort.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
                         serialPort.DtrEnable = true;
+                        LampDTR.Background = Brushes.Green;
+
                         break;
                     case 2:
                         dtrDsrHandshake = false;
@@ -83,7 +85,8 @@ namespace IWSK_RS232
                         XonXoffHandshake = false;
                         serialPort.PinChanged += new SerialPinChangedEventHandler(portPinChanged);
                         serialPort.RtsEnable = true;
-                        //serialPort1.Handshake = (Handshake)2;
+                        LampRTS.Background = Brushes.Green;
+                        serialPort.Handshake = (Handshake)Enum.ToObject(typeof(Handshake), ComboBoxFlowControl.SelectedIndex);
                         break;
                     case 1:
                         dtrDsrHandshake = false;
@@ -129,7 +132,13 @@ namespace IWSK_RS232
                     ButtonXON.IsEnabled = true;
                     ButtonXOFF.IsEnabled = true;
                 }
-
+                if (ComboBoxFlowControl.SelectedIndex == 0)
+                {
+                    ButtonRTS.IsEnabled = true;
+                    ButtonDTR.IsEnabled = true;
+                    ButtonXON.IsEnabled = true;
+                    ButtonXOFF.IsEnabled = true;
+                }
                 ButtonClose.IsEnabled = true;
             }
             catch (Exception ex)
@@ -154,6 +163,11 @@ namespace IWSK_RS232
                 ButtonXOFF.IsEnabled = false;
 
                 ButtonClose.IsEnabled = false;
+
+                LampDTR.Background = Brushes.Red;
+                LampDSR.Background = Brushes.Red;
+                LampCTS.Background = Brushes.Red;
+                LampRTS.Background = Brushes.Red;
             }
         }
 
@@ -223,23 +237,32 @@ namespace IWSK_RS232
 
         private void ButtonPingSend_Click(object sender, RoutedEventArgs e)
         {
-            serialPort.Write("\r");
-            pingReady = false;
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            while (!pingReady)
+            try
             {
-                if (sw.ElapsedMilliseconds > 1000)
+                serialPort.WriteTimeout = 2000;
+                serialPort.Write("\r");
+                pingReady = false;
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                while (!pingReady)
                 {
-                    sw.Stop();
-                    TextBoxOutput.Clear();
-                    TextBoxOutput.AppendText("Error timeout");
-                    return;
+                    if (sw.ElapsedMilliseconds > 1000)
+                    {
+                        sw.Stop();
+                        TextBoxOutput.Clear();
+                        TextBoxOutput.AppendText("Error timeout");
+                        return;
+                    }
                 }
+                sw.Stop();
+                TextBoxOutput.Clear();
+                TextBoxOutput.AppendText($"Czas pingu = {sw.ElapsedMilliseconds}ms");
             }
-            sw.Stop();
-            TextBoxOutput.Clear();
-            TextBoxOutput.AppendText($"Czas pingu = {sw.ElapsedMilliseconds}ms");
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception: {ex.Message}");
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private void ComboBoxTerminator_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -258,16 +281,32 @@ namespace IWSK_RS232
 
         private void ButtonDTR_Click(object sender, RoutedEventArgs e)
         {
-            serialPort.DtrEnable = !serialPort.DtrEnable;
-            if (serialPort.DtrEnable) LampDTR.Background = Brushes.Green;
-            else LampDTR.Background = Brushes.Red;
+            try
+            {
+                serialPort.DtrEnable = !serialPort.DtrEnable;
+                if (serialPort.DtrEnable) LampDTR.Background = Brushes.Green;
+                else LampDTR.Background = Brushes.Red;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception: {ex.Message}");
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private void ButtonRTS_Click(object sender, RoutedEventArgs e)
         {
-            serialPort.RtsEnable = !serialPort.RtsEnable;
-            if (serialPort.RtsEnable) LampRTS.Background = Brushes.Green;
-            else LampRTS.Background = Brushes.Red;
+            try
+            {
+                serialPort.RtsEnable = !serialPort.RtsEnable;
+                if (serialPort.RtsEnable) LampRTS.Background = Brushes.Green;
+                else LampRTS.Background = Brushes.Red;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Exception: {ex.Message}");
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private void ButtonXON_Click(object sender, RoutedEventArgs e)
@@ -555,14 +594,31 @@ namespace IWSK_RS232
             masterRecivedDataTexbox.AppendText($"{e.message} {Environment.NewLine}");
         }
 
-        private void ModbusOpenSlave_Click(object sender, RoutedEventArgs e)
+        private async void ModbusOpenSlave_Click(object sender, RoutedEventArgs e)
         {
-            var adres = int.Parse(slaveAddresTexbox.Text);
-            modbusSlave.setCharacterTimeout((int)(double.Parse(slaveCharacterTimeUpDown.Text) * 1000));
-            modbusSlave.function2Message = slaveSendTextbox.Text;
-            modbusSlave.open(adres);
-            slaveAddresTexbox.IsEnabled = false;
-            slaveCharacterTimeUpDown.IsEnabled = false;
+            try
+            {
+                var adres = int.Parse(slaveAddresTexbox.Text);
+                modbusSlave.setCharacterTimeout((int)(double.Parse(slaveCharacterTimeUpDown.Text) * 1000));
+                modbusSlave.function2Message = slaveSendTextbox.Text;
+                modbusSlave.open(adres);
+                slaveAddresTexbox.IsEnabled = false;
+                slaveCharacterTimeUpDown.IsEnabled = false;
+                ModbusClose.IsEnabled = false;
+                ModbusOpenSlave.IsEnabled = false;
+                ModbusColeSlave.IsEnabled = true;
+            }
+            catch (FormatException)
+            {
+                MessageBox.Show($"Number format is required (X,XX)");
+            }
+            catch (Exception ex)
+            {
+                label13.Background = Brushes.Red;
+                await Task.Run(async () => await Task.Delay(BrushDeley));
+                Console.WriteLine(ex.Message);
+                MessageBox.Show($"{ex.Message}");
+            }
         }
 
         private void ModbusColeSlave_Click(object sender, RoutedEventArgs e)
@@ -570,6 +626,9 @@ namespace IWSK_RS232
             modbusSlave.close();
             slaveAddresTexbox.IsEnabled = true;
             slaveCharacterTimeUpDown.IsEnabled = true;
+            ModbusClose.IsEnabled = true;
+            ModbusOpenSlave.IsEnabled = true;
+            ModbusColeSlave.IsEnabled = false;
         }
 
         private async void ModbusFunction1_Click(object sender, RoutedEventArgs e)
@@ -578,7 +637,7 @@ namespace IWSK_RS232
             {
                 //label13.Invoke(new Action(() => label13.BackColor = Color.Green));
                 label13.Background = Brushes.YellowGreen;
-                await Task.Run(async() => await Task.Delay(BrushDeley));
+                await Task.Run(async () => await Task.Delay(BrushDeley));
                 int addres = int.Parse(addresTextBox.Text);
                 string data = argTextBox.Text;
                 int retransmit = int.Parse(retransmissionUpDown.Text);
